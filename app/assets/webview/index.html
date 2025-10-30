@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HeyGen Web Bridge</title>
+    <style>
+      body { margin: 0; font-family: system-ui, sans-serif; background: #111; color: #eee; }
+      .row { display: flex; gap: 8px; padding: 8px; }
+      video, canvas { width: 50%; aspect-ratio: 16/9; background: #000; }
+      #log { font-size: 12px; white-space: pre-wrap; padding: 8px; }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <video id="avatar" playsinline autoplay muted></video>
+      <video id="webcam" playsinline autoplay muted></video>
+    </div>
+    <div class="row">
+      <canvas id="mix"></canvas>
+    </div>
+    <div id="log"></div>
+    <script>
+      async function backendFetch(path, opts) {
+        // For demo, assumes backend at localhost:4000; Flutter should post config
+        const base = window._backendBase || 'http://localhost:4000';
+        return fetch(base + path, opts);
+      }
+
+      let mixCtx, mixCanvas, mixStream, mediaRecorder, recordedChunks = [], activeRecordingId = null;
+
+      async function startRecording() {
+        if (!mixCanvas) mixCanvas = document.getElementById('mix');
+        if (!mixCtx) mixCtx = mixCanvas.getContext('2d');
+        const avatar = document.getElementById('avatar');
+        const webcam = document.getElementById('webcam');
+        const draw = () => {
+          mixCanvas.width = avatar.videoWidth + webcam.videoWidth;
+          mixCanvas.height = Math.max(avatar.videoHeight, webcam.videoHeight);
+          mixCtx.drawImage(avatar, 0, 0);
+          mixCtx.drawImage(webcam, avatar.videoWidth, 0);
+          requestAnimationFrame(draw);
+        };
+        draw();
+        mixStream = mixCanvas.captureStream(30);
+        mediaRecorder = new MediaRecorder(mixStream, { mimeType: 'video/webm;codecs=vp9' });
+        recordedChunks = [];
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          const dataUrl = await new Promise((r) => { const fr = new FileReader(); fr.onloadend = () => r(fr.result); fr.readAsDataURL(blob); });
+          await backendFetch(`/api/recordings/upload/${activeRecordingId}`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ webmBase64: dataUrl })
+          });
+          window.flutter_inappwebview?.callHandler('flutterBridge', { type: 'upload_done', id: activeRecordingId });
+          activeRecordingId = null;
+        };
+        mediaRecorder.start(1000);
+      }
+
+      window.addEventListener('message', async (e) => {
+        const data = e.data || {};
+        const log = document.getElementById('log');
+        log.textContent += `\nmsg: ${JSON.stringify(data)}`;
+        if (data.type === 'record_start') {
+          activeRecordingId = data.recordingId;
+          await startRecording();
+        } else if (data.type === 'record_stop') {
+          mediaRecorder && mediaRecorder.stop();
+        } else if (data.type === 'backend_base') {
+          window._backendBase = data.url;
+        }
+      });
+      // Placeholder bridge: Flutter will postMessage commands; this page will respond.
+      window.addEventListener('message', (e) => {
+        const data = e.data || {};
+        const log = document.getElementById('log');
+        log.textContent += `\nmsg: ${JSON.stringify(data)}`;
+      });
+      // Hook up webcam preview for immediate UX
+      (async () => {
+        try {
+          const cam = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          document.getElementById('webcam').srcObject = cam;
+        } catch (e) {
+          const log = document.getElementById('log');
+          log.textContent += `\nwebcam error: ${e}`;
+        }
+      })();
+    </script>
+  </body>
+  </html>
+
