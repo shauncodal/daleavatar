@@ -3,91 +3,1034 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>HeyGen Web Bridge</title>
+    <title>HeyGen Avatar</title>
+    <script src="https://unpkg.com/livekit-client@2.11.3/dist/livekit-client.umd.js" onload="window.livekitLoaded = true; console.log('LiveKit script loaded, checking for:', window.LivekitClient || window.LiveKit || window.livekit || 'not found'); if (window.LivekitClient) { console.log('LivekitClient properties:', Object.keys(window.LivekitClient).slice(0, 10).join(', ')); }"></script>
+    <script src="https://unpkg.com/protobufjs@7.4.0/dist/protobuf.min.js"></script>
     <style>
-      body { margin: 0; font-family: system-ui, sans-serif; background: #111; color: #eee; }
-      .row { display: flex; gap: 8px; padding: 8px; }
-      video, canvas { width: 50%; aspect-ratio: 16/9; background: #000; }
-      #log { font-size: 12px; white-space: pre-wrap; padding: 8px; }
+      body { margin: 0; font-family: system-ui, sans-serif; background: #000; color: #eee; overflow: hidden; }
+      .row { 
+        display: flex; 
+        flex-direction: column;
+        gap: 16px; 
+        padding: 16px; 
+        height: 100vh; 
+        width: 100vw;
+        box-sizing: border-box; 
+        align-items: stretch;
+        justify-content: center;
+        overflow: hidden;
+      }
+      
+      @media (min-width: 768px) {
+        .row {
+          gap: 24px;
+          padding: 24px;
+        }
+      }
+      video { 
+        width: 100%;
+        flex: 1 1 0;
+        min-height: 0;
+        aspect-ratio: 16 / 9;
+        background: #141820; 
+        border: 1px solid #1a2e23; 
+        border-radius: 10px; 
+        object-fit: contain; 
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative;
+        z-index: 10;
+      }
+      
+      video#avatar {
+        background: #141820;
+        border: 2px solid #00bc7d;
+      }
+      #log { display: none; }
+      .status { 
+        position: fixed; 
+        top: 16px; 
+        right: 16px; 
+        padding: 8px 16px; 
+        background: rgba(0,0,0,0.8); 
+        border-radius: 8px; 
+        font-size: 12px;
+        font-family: 'Inter', sans-serif;
+        z-index: 1000;
+        border: 1px solid rgba(255,255,255,0.1);
+      }
+      .status.connected { 
+        background: rgba(0,188,125,0.2);
+        border-color: rgba(0,188,125,0.5);
+        color: #00bc7d;
+      }
+      .status.error { 
+        background: rgba(251,44,54,0.2);
+        border-color: rgba(251,44,54,0.5);
+        color: #fb2c36;
+      }
+      .status.disconnected {
+        background: rgba(161,167,184,0.1);
+        border-color: rgba(161,167,184,0.3);
+        color: #a1a7b8;
+      }
     </style>
   </head>
   <body>
+    <div class="status disconnected" id="status">Not Connected</div>
     <div class="row">
-      <video id="avatar" playsinline autoplay muted></video>
-      <video id="webcam" playsinline autoplay muted></video>
+      <video id="avatar" playsinline autoplay style="width: 100%; height: auto; min-height: 100px;"></video>
+      <video id="webcam" playsinline autoplay muted style="width: 100%; height: auto; min-height: 100px;"></video>
     </div>
-    <div class="row">
-      <canvas id="mix"></canvas>
-    </div>
-    <div id="log"></div>
+    <div id="log" style="display: none;"></div>
     <script>
-      async function backendFetch(path, opts) {
-        // For demo, assumes backend at localhost:4000; Flutter should post config
+      const log = (msg) => {
+        // Log only to console, not to UI
+        console.log('[HeyGen]', msg);
+      };
+
+      const setStatus = (msg, className = '') => {
+        const el = document.getElementById('status');
+        // Simplify status messages - only show "Connected" or "Not Connected"
+        if (className === 'connected') {
+          el.textContent = 'Connected';
+          el.className = 'status connected';
+        } else if (className === 'error') {
+          el.textContent = 'Not Connected';
+          el.className = 'status disconnected';
+        } else {
+          el.textContent = 'Not Connected';
+          el.className = 'status disconnected';
+        }
+      };
+
+      let room = null;
+      let webSocket = null;
+      let userMediaStream = null;
+      let audioContext = null;
+      let scriptProcessor = null;
+      let mediaStreamAudioSource = null;
+      let audioRawFrame = null;
+      let isMuted = false;
+      let mediaRecorder = null;
+      let recordedChunks = [];
+      let recordingId = null;
+
+      // Check URL parameters or hash for session data
+      function getSessionFromURL() {
+        const params = new URLSearchParams(window.location.search);
+        const hash = window.location.hash.substring(1);
+        
+        // Check URL parameters first (they take precedence)
+        if (params.has('token') && params.has('sessionId') && params.has('url') && params.has('accessToken')) {
+          const token = params.get('token');
+          const sessionId = params.get('sessionId');
+          const url = decodeURIComponent(params.get('url')); // Decode URL parameter
+          const accessToken = params.get('accessToken');
+          
+          log('Found URL params - token: ' + (token ? 'yes' : 'no') + ', sessionId: ' + sessionId + ', url: ' + url.substring(0, 50) + '..., accessToken: ' + (accessToken ? 'yes' : 'no'));
+          
+          // Validate all parameters
+          if (!token || !sessionId || !url || !accessToken) {
+            log('Error: Missing session parameters - token: ' + !!token + ', sessionId: ' + !!sessionId + ', url: ' + !!url + ', accessToken: ' + !!accessToken);
+            return null;
+          }
+          
+          // Validate URL format
+          if (!url.startsWith('wss://') && !url.startsWith('ws://')) {
+            log('Error: Invalid URL format (must start with wss:// or ws://): ' + url);
+            return null;
+          }
+          
+          const result = {
+            token: token,
+            sessionData: {
+              session_id: sessionId,
+              url: url,
+              access_token: accessToken
+            }
+          };
+          
+          log('Returning session data structure from URL params');
+          return result;
+        }
+        
+        // Check hash only if it's not a command (record_start, record_stop, etc.)
+        if (hash) {
+          try {
+            const decoded = atob(hash);
+            const data = JSON.parse(decoded);
+            
+            // If hash contains a command, don't treat it as session data
+            if (data.type === 'record_start' || data.type === 'record_stop' || data.type === 'start_voice_chat') {
+              log('Hash contains command, not session data');
+              return null;
+            }
+            
+            // If hash has session data structure, return it
+            if (data.token && data.sessionData) {
+              log('Returning session data structure from hash');
+              return data;
+            }
+          } catch (e) {
+            log('Error parsing URL hash: ' + e.message);
+          }
+        }
+        
+        log('URL params check - has token: ' + params.has('token') + ', has sessionId: ' + params.has('sessionId') + ', has url: ' + params.has('url') + ', has accessToken: ' + params.has('accessToken'));
+        
+        return null;
+      }
+
+      // Check URL hash for commands (record_start, record_stop, etc.)
+      function checkURLForCommands() {
+        const hash = window.location.hash.substring(1);
+        if (!hash) return;
+        
+        try {
+          // Try to parse as base64 JSON
+          const decoded = atob(hash);
+          const data = JSON.parse(decoded);
+          
+          if (data.type === 'record_start' && data.recordingId) {
+            log('Received record_start from URL hash');
+            handleFlutterMessage({ type: 'record_start', recordingId: data.recordingId });
+            // Clear hash after processing
+            window.location.hash = '';
+          } else if (data.type === 'record_stop') {
+            log('Received record_stop from URL hash');
+            handleFlutterMessage({ type: 'record_stop' });
+            // Clear hash after processing
+            window.location.hash = '';
+          }
+        } catch (e) {
+          // Not a command, probably session data - ignore
+        }
+      }
+
+      async function backendFetch(path, opts = {}) {
         const base = window._backendBase || 'http://localhost:4000';
-        return fetch(base + path, opts);
-      }
-
-      let mixCtx, mixCanvas, mixStream, mediaRecorder, recordedChunks = [], activeRecordingId = null;
-
-      async function startRecording() {
-        if (!mixCanvas) mixCanvas = document.getElementById('mix');
-        if (!mixCtx) mixCtx = mixCanvas.getContext('2d');
-        const avatar = document.getElementById('avatar');
-        const webcam = document.getElementById('webcam');
-        const draw = () => {
-          mixCanvas.width = avatar.videoWidth + webcam.videoWidth;
-          mixCanvas.height = Math.max(avatar.videoHeight, webcam.videoHeight);
-          mixCtx.drawImage(avatar, 0, 0);
-          mixCtx.drawImage(webcam, avatar.videoWidth, 0);
-          requestAnimationFrame(draw);
-        };
-        draw();
-        mixStream = mixCanvas.captureStream(30);
-        mediaRecorder = new MediaRecorder(mixStream, { mimeType: 'video/webm;codecs=vp9' });
-        recordedChunks = [];
-        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-        mediaRecorder.onstop = async () => {
-          const blob = new Blob(recordedChunks, { type: 'video/webm' });
-          const dataUrl = await new Promise((r) => { const fr = new FileReader(); fr.onloadend = () => r(fr.result); fr.readAsDataURL(blob); });
-          await backendFetch(`/api/recordings/upload/${activeRecordingId}`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ webmBase64: dataUrl })
+        try {
+          const res = await fetch(base + path, {
+            ...opts,
+            headers: { 'Content-Type': 'application/json', ...opts.headers }
           });
-          window.flutter_inappwebview?.callHandler('flutterBridge', { type: 'upload_done', id: activeRecordingId });
-          activeRecordingId = null;
-        };
-        mediaRecorder.start(1000);
+          return await res.json();
+        } catch (e) {
+          log('Backend error: ' + e.message);
+          throw e;
+        }
       }
 
+      // Setup webcam
+      async function setupWebcam() {
+        try {
+          // Request both video and audio - we'll use audio for voice chat
+          userMediaStream = await navigator.mediaDevices.getUserMedia({ 
+            video: true, 
+            audio: {
+              sampleRate: 16000,
+              channelCount: 1,
+              autoGainControl: true,
+              echoCancellation: true,
+              noiseSuppression: true,
+            }
+          });
+          document.getElementById('webcam').srcObject = userMediaStream;
+          log('Webcam connected');
+        } catch (e) {
+          log('Webcam error: ' + e.message);
+        }
+      }
+
+      // Wait for LiveKit to load
+      function waitForLiveKit(maxWait = 10000) {
+        return new Promise((resolve, reject) => {
+          const startTime = Date.now();
+          const check = () => {
+            // Check various possible global variable names (note: it's LivekitClient with capital L and C)
+            const livekit = window.LivekitClient || window.LiveKit || window.livekit || window.livekit_client;
+            if (livekit) {
+              const name = window.LivekitClient ? 'LivekitClient' : window.LiveKit ? 'LiveKit' : window.livekit ? 'livekit' : 'livekit_client';
+              log('LiveKit loaded, found as: ' + name);
+              resolve(livekit);
+            } else if (Date.now() - startTime > maxWait) {
+              log('Available globals: ' + Object.keys(window).filter(k => k.toLowerCase().includes('live')).join(', '));
+              reject(new Error('LiveKit failed to load'));
+            } else {
+              setTimeout(check, 100);
+            }
+          };
+          check();
+        });
+      }
+
+      // Connect to HeyGen using LiveKit - following SDK pattern
+      async function connectToHeyGen(token, sessionInfo) {
+        // Wait for LiveKit to be available
+        try {
+          await waitForLiveKit();
+        } catch (e) {
+          log('Error: LiveKit not loaded - ' + e.message);
+            setStatus('Not Connected', 'disconnected');
+          return;
+        }
+        
+        const livekit = window.LivekitClient || window.LiveKit || window.livekit || window.livekit_client;
+        if (!livekit) {
+          log('Error: LiveKit not available');
+          log('Available window properties: ' + Object.keys(window).filter(k => k.toLowerCase().includes('live')).join(', '));
+            setStatus('Not Connected', 'disconnected');
+          return;
+        }
+
+        try {
+          // LiveKit UMD bundle exposes classes directly on the global object
+          // Try multiple ways to access the classes
+          let Room, RoomEvent, VideoPresets;
+          
+          // First try direct access
+          if (livekit.Room && livekit.RoomEvent && livekit.VideoPresets) {
+            Room = livekit.Room;
+            RoomEvent = livekit.RoomEvent;
+            VideoPresets = livekit.VideoPresets;
+            log('Found classes directly on LivekitClient');
+          } 
+          // Try default export
+          else if (livekit.default) {
+            Room = livekit.default.Room || livekit.default.default?.Room;
+            RoomEvent = livekit.default.RoomEvent || livekit.default.default?.RoomEvent;
+            VideoPresets = livekit.default.VideoPresets || livekit.default.default?.VideoPresets;
+            log('Found classes via default export');
+          }
+          // Try accessing via LiveKit namespace
+          else if (window.LiveKit) {
+            Room = window.LiveKit.Room;
+            RoomEvent = window.LiveKit.RoomEvent;
+            VideoPresets = window.LiveKit.VideoPresets;
+            log('Found classes via LiveKit namespace');
+          }
+          
+          // Debug: log available properties
+          log('LivekitClient properties: ' + Object.keys(livekit).slice(0, 20).join(', '));
+          
+          if (!Room || !RoomEvent || !VideoPresets) {
+            log('Error: LiveKit classes not found. Available properties: ' + Object.keys(livekit).join(', '));
+            setStatus('Not Connected', 'disconnected');
+            return;
+          }
+          
+          log('LiveKit classes found: Room, RoomEvent, VideoPresets');
+          
+          log('Creating LiveKit room...');
+          room = new Room({
+            adaptiveStream: true,
+            dynacast: true,
+            videoCaptureDefaults: {
+              resolution: VideoPresets.h720.resolution,
+            },
+          });
+
+          const mediaStream = new MediaStream();
+          
+          // Handle video and audio track subscription
+          room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+            log('Track subscribed: ' + track.kind + ' from ' + participant.identity);
+            
+            if (track.kind === 'video') {
+              const avatarVideo = document.getElementById('avatar');
+              if (!avatarVideo) {
+                log('Error: Avatar video element not found');
+                return;
+              }
+              // Create a new MediaStream for the avatar video
+              const stream = new MediaStream([track.mediaStreamTrack]);
+              
+              // Clear any existing stream first
+              if (avatarVideo.srcObject) {
+                avatarVideo.srcObject.getTracks().forEach(track => track.stop());
+              }
+              
+              avatarVideo.srcObject = stream;
+              
+              // Force video to be visible and ensure proper styling
+              avatarVideo.style.display = 'block';
+              avatarVideo.style.visibility = 'visible';
+              avatarVideo.style.opacity = '1';
+              avatarVideo.style.width = '100%';
+              avatarVideo.style.height = 'auto';
+              
+              // Add loadedmetadata event listener to ensure video loads
+              avatarVideo.addEventListener('loadedmetadata', () => {
+                log('Avatar video metadata loaded - ' + avatarVideo.videoWidth + 'x' + avatarVideo.videoHeight);
+                avatarVideo.play().catch(e => log('Play after metadata error: ' + e.message));
+              });
+              
+              // Ensure video plays
+              avatarVideo.play().then(() => {
+                log('Avatar video playing - width: ' + avatarVideo.videoWidth + ', height: ' + avatarVideo.videoHeight);
+                setStatus('Connected', 'connected');
+              }).catch(e => {
+                log('Play error: ' + e.message);
+                // Try muted play
+                avatarVideo.muted = true;
+                avatarVideo.play().then(() => {
+                  log('Avatar video playing (muted)');
+                  setStatus('Connected', 'connected');
+                }).catch(e2 => {
+                  log('Retry play error: ' + e2.message);
+                });
+              });
+              
+              // Check video after a delay
+              setTimeout(() => {
+                log('Avatar check - dimensions: ' + avatarVideo.videoWidth + 'x' + avatarVideo.videoHeight + ', readyState: ' + avatarVideo.readyState + ', paused: ' + avatarVideo.paused);
+                if (avatarVideo.videoWidth === 0 || avatarVideo.videoHeight === 0) {
+                  log('WARNING: Avatar video has no dimensions! Stream tracks: ' + (stream.getTracks().length));
+                  // Try to reload the stream
+                  if (track.mediaStreamTrack && track.mediaStreamTrack.readyState === 'live') {
+                    const newStream = new MediaStream([track.mediaStreamTrack]);
+                    avatarVideo.srcObject = newStream;
+                    avatarVideo.play().catch(err => log('Reload play error: ' + err.message));
+                  }
+                } else {
+                  log('Avatar video is visible with dimensions');
+                }
+              }, 2000);
+            } else if (track.kind === 'audio') {
+              // Handle audio track - create audio element to play avatar's voice
+              log('Avatar audio track received - playing audio');
+              const audioElement = new Audio();
+              audioElement.autoplay = true;
+              audioElement.srcObject = new MediaStream([track.mediaStreamTrack]);
+              audioElement.play().catch(e => {
+                log('Audio play error: ' + e.message);
+                // Fallback: try connecting to AudioContext
+                if (audioContext && track.mediaStreamTrack) {
+                  const audioSource = audioContext.createMediaStreamSource(new MediaStream([track.mediaStreamTrack]));
+                  audioSource.connect(audioContext.destination);
+                  log('Connected avatar audio via AudioContext');
+                }
+              });
+            }
+          });
+
+          room.on(RoomEvent.TrackUnsubscribed, (track) => {
+            if (track.mediaStreamTrack) {
+              mediaStream.removeTrack(track.mediaStreamTrack);
+            }
+          });
+
+          room.on(RoomEvent.Connected, () => {
+            log('Room connected successfully');
+            setStatus('Connected', 'connected');
+            
+            // Check for existing remote participants
+            room.remoteParticipants.forEach((participant) => {
+              log('Found remote participant: ' + participant.identity);
+              participant.videoTrackPublications.forEach((publication) => {
+                if (publication.track) {
+                  const avatarVideo = document.getElementById('avatar');
+                  if (avatarVideo) {
+                    const stream = new MediaStream([publication.track.mediaStreamTrack]);
+                    avatarVideo.srcObject = stream;
+                    avatarVideo.style.display = 'block';
+                    avatarVideo.style.visibility = 'visible';
+                    avatarVideo.style.opacity = '1';
+                    avatarVideo.play().then(() => {
+                      log('Avatar video playing from existing participant - ' + avatarVideo.videoWidth + 'x' + avatarVideo.videoHeight);
+                      setStatus('Connected', 'connected');
+                    }).catch(e => {
+                      log('Play error: ' + e.message);
+                      avatarVideo.muted = true;
+                      avatarVideo.play().then(() => {
+                        log('Avatar video playing (muted)');
+                        setStatus('Connected', 'connected');
+                      }).catch(e2 => log('Retry play error: ' + e2.message));
+                    });
+                  }
+                }
+              });
+            });
+          });
+
+          room.on(RoomEvent.ParticipantConnected, (participant) => {
+            log('Participant connected: ' + participant.identity);
+            setStatus('Connected', 'connected');
+          });
+
+          room.on(RoomEvent.DataReceived, (payload, publication, participant) => {
+            try {
+              const message = JSON.parse(new TextDecoder().decode(payload));
+              log('Event: ' + message.type);
+            } catch (e) {
+              log('Data parse error: ' + e.message);
+            }
+          });
+
+          room.on(RoomEvent.Disconnected, (reason) => {
+            log('Room disconnected: ' + reason);
+            setStatus('Not Connected', 'disconnected');
+            room = null;
+          });
+
+          room.on(RoomEvent.ConnectionStateChanged, (state) => {
+            log('Connection state: ' + state);
+            if (state === 'connected') {
+              setStatus('Connected', 'connected');
+            } else if (state === 'disconnected') {
+              setStatus('Not Connected', 'disconnected');
+            } else if (state === 'reconnecting') {
+              setStatus('Not Connected', 'disconnected');
+            } else if (state === 'connecting') {
+              setStatus('Not Connected', 'disconnected');
+            }
+          });
+
+          // Connect to LiveKit room
+          log('Connecting to LiveKit: ' + sessionInfo.url);
+          log('Session ID: ' + sessionInfo.session_id);
+          
+          // Validate URL format
+          if (!sessionInfo.url || typeof sessionInfo.url !== 'string') {
+            throw new Error('Invalid or missing LiveKit URL: ' + sessionInfo.url);
+          }
+          
+          if (!sessionInfo.url.startsWith('wss://') && !sessionInfo.url.startsWith('ws://')) {
+            throw new Error('Invalid LiveKit URL format (must start with wss:// or ws://): ' + sessionInfo.url);
+          }
+          
+          if (!sessionInfo.access_token) {
+            throw new Error('Missing access token');
+          }
+          
+          try {
+            await room.prepareConnection(sessionInfo.url, sessionInfo.access_token);
+            log('LiveKit prepared');
+            
+            // Start the session
+            await backendFetch('/api/stream/start-session', {
+              method: 'POST',
+              body: JSON.stringify({ sessionId: sessionInfo.session_id, token: token })
+            });
+            log('Session started via API');
+
+            await room.connect(sessionInfo.url, sessionInfo.access_token);
+            log('LiveKit connection established - waiting for tracks...');
+            setStatus('Not Connected', 'disconnected');
+          } catch (e) {
+            log('LiveKit connection error: ' + e.message);
+            setStatus('Not Connected', 'disconnected');
+            throw e;
+          }
+
+          // Connect WebSocket for voice chat
+          await connectWebSocket(sessionInfo.session_id, token);
+
+        } catch (e) {
+          log('Connection error: ' + e.message);
+          setStatus('Not Connected', 'disconnected');
+        }
+      }
+
+      // Convert Float32 audio to S16 PCM
+      function convertFloat32ToS16PCM(float32Array) {
+        const int16Array = new Int16Array(float32Array.length);
+        for (let i = 0; i < float32Array.length; i++) {
+          const clampedValue = Math.max(-1, Math.min(1, float32Array[i]));
+          int16Array[i] = clampedValue < 0 ? clampedValue * 32768 : clampedValue * 32767;
+        }
+        return int16Array;
+      }
+
+      // Load protobuf schema for audio frames
+      async function loadAudioRawFrame() {
+        if (audioRawFrame) return audioRawFrame;
+        
+        const pipecatSchema = {
+          "options": { "syntax": "proto3" },
+          "nested": {
+            "pipecat": {
+              "nested": {
+                "AudioRawFrame": {
+                  "fields": {
+                    "id": { "type": "uint64", "id": 1 },
+                    "name": { "type": "string", "id": 2 },
+                    "audio": { "type": "bytes", "id": 3 },
+                    "sampleRate": { "type": "uint32", "id": 4 },
+                    "numChannels": { "type": "uint32", "id": 5 }
+                  }
+                },
+                "Frame": {
+                  "oneofs": {
+                    "frame": { "oneof": ["audio"] }
+                  },
+                  "fields": {
+                    "audio": { "type": "AudioRawFrame", "id": 2 }
+                  }
+                }
+              }
+            }
+          }
+        };
+        
+        if (typeof protobuf !== 'undefined') {
+          const root = protobuf.Root.fromJSON(pipecatSchema);
+          audioRawFrame = root.lookupType('pipecat.Frame');
+          log('Protobuf schema loaded');
+        } else {
+          throw new Error('Protobuf library not loaded');
+        }
+        return audioRawFrame;
+      }
+
+      // Start voice chat - capture and send audio
+      async function startVoiceChat() {
+        if (!webSocket || webSocket.readyState !== WebSocket.OPEN) {
+          log('WebSocket not ready for voice chat');
+          return;
+        }
+
+        try {
+          await loadAudioRawFrame();
+          
+          // Create AudioContext with 16kHz sample rate
+          audioContext = new (window.AudioContext || window.webkitAudioContext)({
+            latencyHint: 'interactive',
+            sampleRate: 16000,
+          });
+
+          // Use existing webcam stream's audio track, or get new audio if webcam not available
+          let audioStream;
+          if (userMediaStream && userMediaStream.getAudioTracks().length > 0) {
+            // Use audio from webcam stream
+            const audioTracks = userMediaStream.getAudioTracks();
+            audioStream = new MediaStream(audioTracks);
+            log('Using audio from webcam stream');
+          } else {
+            // Get new audio stream if webcam doesn't have audio
+            audioStream = await navigator.mediaDevices.getUserMedia({
+              audio: {
+                sampleRate: 16000,
+                channelCount: 1,
+                autoGainControl: true,
+                echoCancellation: true,
+                noiseSuppression: true,
+              },
+            });
+            log('Created new audio stream for voice chat');
+          }
+
+          mediaStreamAudioSource = audioContext.createMediaStreamSource(audioStream);
+          
+          // ScriptProcessorNode is deprecated but necessary for this use case
+          scriptProcessor = audioContext.createScriptProcessor(512, 1, 1);
+          
+          mediaStreamAudioSource.connect(scriptProcessor);
+          scriptProcessor.connect(audioContext.destination);
+
+          scriptProcessor.onaudioprocess = (event) => {
+            if (!webSocket || webSocket.readyState !== WebSocket.OPEN || !audioRawFrame) {
+              return;
+            }
+
+            let audioData;
+            if (isMuted) {
+              audioData = new Float32Array(512);
+            } else {
+              audioData = event.inputBuffer.getChannelData(0);
+            }
+
+            // Convert Float32 to S16 PCM
+            const pcmS16Array = convertFloat32ToS16PCM(audioData);
+            const pcmByteArray = new Uint8Array(pcmS16Array.buffer);
+
+            // Create protobuf frame
+            const frame = audioRawFrame.create({
+              audio: {
+                audio: Array.from(pcmByteArray),
+                sampleRate: 16000,
+                numChannels: 1,
+              },
+            });
+
+            // Encode and send
+            try {
+              const encodedFrame = audioRawFrame.encode(frame).finish();
+              webSocket.send(encodedFrame);
+            } catch (e) {
+              log('Error encoding audio frame: ' + e.message);
+            }
+          };
+
+          log('Voice chat started - sending audio');
+          
+          // Wait a bit for everything to be ready
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } catch (e) {
+          log('Error starting voice chat: ' + e.message);
+          setStatus('Voice chat error: ' + e.message, 'error');
+        }
+      }
+
+      // Connect WebSocket for voice chat
+      async function connectWebSocket(sessionId, token) {
+        const websocketUrl = `wss://api.heygen.com/v1/ws/streaming.chat?session_id=${sessionId}&session_token=${token}&silence_response=false&push_to_talk=false`;
+        
+        log('Connecting WebSocket: ' + websocketUrl);
+        webSocket = new WebSocket(websocketUrl);
+
+        webSocket.onopen = async () => {
+          log('WebSocket connected - starting voice chat');
+          await startVoiceChat();
+        };
+
+        webSocket.onmessage = (event) => {
+          try {
+            // Try to parse as JSON first (for text messages/events)
+            if (event.data instanceof Blob) {
+              // Binary data - might be audio response
+              log('Received binary data from WebSocket');
+            } else {
+              const data = JSON.parse(event.data);
+              log('WS event: ' + (data.event_type || JSON.stringify(data).substring(0, 100)));
+            }
+          } catch (e) {
+            // Might be binary protobuf data
+            log('WS data received (binary or non-JSON)');
+          }
+        };
+
+        webSocket.onerror = (error) => {
+          log('WebSocket error');
+        };
+
+        webSocket.onclose = () => {
+          log('WebSocket closed');
+          webSocket = null;
+        };
+      }
+
+      // Start recording - combine webcam and avatar streams
+      async function startRecording(recId) {
+        recordingId = recId;
+        log('Starting recording, ID: ' + recordingId);
+        
+        try {
+          // Get webcam stream
+          const webcamStream = userMediaStream;
+          if (!webcamStream) {
+            log('Error: Webcam stream not available');
+            return;
+          }
+
+          // Get avatar video element stream
+          const avatarVideo = document.getElementById('avatar');
+          let avatarStream = null;
+          if (avatarVideo && avatarVideo.srcObject) {
+            avatarStream = avatarVideo.srcObject;
+          }
+
+          // Create composite stream (webcam + avatar side by side)
+          // For now, we'll record just the composite using canvas
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = 1280;
+          canvas.height = 720;
+
+          // Create a stream from canvas
+          const canvasStream = canvas.captureStream(30); // 30 fps
+
+          // Combine canvas stream with audio from webcam
+          const audioTracks = webcamStream.getAudioTracks();
+          const compositeStream = new MediaStream([
+            ...canvasStream.getVideoTracks(),
+            ...audioTracks,
+            ...(avatarStream ? avatarStream.getAudioTracks() : [])
+          ]);
+
+          // Start drawing webcam and avatar to canvas
+          const drawInterval = setInterval(() => {
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw webcam (left half)
+            if (webcamStream) {
+              const webcamVideo = document.getElementById('webcam');
+              if (webcamVideo && webcamVideo.videoWidth > 0) {
+                ctx.drawImage(webcamVideo, 0, 0, canvas.width / 2, canvas.height);
+              }
+            }
+
+            // Draw avatar (right half)
+            if (avatarVideo && avatarVideo.videoWidth > 0) {
+              ctx.drawImage(avatarVideo, canvas.width / 2, 0, canvas.width / 2, canvas.height);
+            }
+          }, 33); // ~30fps
+
+          // Store interval to clear later
+          window._recordingDrawInterval = drawInterval;
+
+          // Start MediaRecorder
+          const options = { mimeType: 'video/webm;codecs=vp9,opus' };
+          if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+            options.mimeType = 'video/webm;codecs=vp8,opus';
+          }
+          if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+            options.mimeType = 'video/webm';
+          }
+
+          mediaRecorder = new MediaRecorder(compositeStream, options);
+        recordedChunks = [];
+
+          mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+              recordedChunks.push(event.data);
+            }
+          };
+
+        mediaRecorder.onstop = async () => {
+            log('Recording stopped, chunks: ' + recordedChunks.length);
+            
+            // Clear draw interval
+            if (window._recordingDrawInterval) {
+              clearInterval(window._recordingDrawInterval);
+              window._recordingDrawInterval = null;
+            }
+
+            // Combine chunks into blob
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            log('Recording blob size: ' + blob.size + ' bytes');
+
+            // Convert to base64 and upload
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+              const base64data = reader.result;
+              try {
+                log('Uploading recording to backend...');
+                await backendFetch('/api/recordings/upload/' + recordingId, {
+                  method: 'POST',
+                  body: JSON.stringify({ webmBase64: base64data })
+          });
+                log('Recording uploaded successfully');
+                setStatus('Recording saved', 'connected');
+              } catch (e) {
+                log('Error uploading recording: ' + e.message);
+                setStatus('Upload error: ' + e.message, 'error');
+              }
+            };
+            reader.readAsDataURL(blob);
+          };
+
+          mediaRecorder.onerror = (event) => {
+            log('MediaRecorder error: ' + event.error);
+          };
+
+          mediaRecorder.start(1000); // Collect data every second
+          log('Recording started');
+          setStatus('Recording...', 'connected');
+
+        } catch (e) {
+          log('Error starting recording: ' + e.message);
+          setStatus('Recording error: ' + e.message, 'error');
+        }
+      }
+
+      // Stop recording
+      function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          log('Stopping recording...');
+          mediaRecorder.stop();
+          setStatus('Processing recording...', 'connected');
+        } else {
+          log('No active recording to stop');
+      }
+      }
+
+      // Message handler from Flutter or URL (postMessage events)
       window.addEventListener('message', async (e) => {
         const data = e.data || {};
-        const log = document.getElementById('log');
-        log.textContent += `\nmsg: ${JSON.stringify(data)}`;
-        if (data.type === 'record_start') {
-          activeRecordingId = data.recordingId;
-          await startRecording();
-        } else if (data.type === 'record_stop') {
-          mediaRecorder && mediaRecorder.stop();
+        log('Received postMessage: ' + JSON.stringify(data).substring(0, 100));
+        await handleFlutterMessage(data);
+      });
+
+      // Also expose for direct calls
+      window.handleMessage = async (e) => {
+        const data = (e && e.data) || e || {};
+        await handleFlutterMessage(data);
+      };
+      
+      window.receiveFromFlutter = async (data) => {
+        await handleFlutterMessage(data);
+      };
+
+      // Initialize message queue if not exists
+      if (!window._flutterMessageQueue) {
+        window._flutterMessageQueue = [];
+        log('Message queue initialized');
+      }
+      if (!window._lastFlutterMessage) {
+        window._lastFlutterMessage = null;
+      }
+      
+      // Also create a hidden element for Flutter to write to
+      const messageElement = document.createElement('div');
+      messageElement.id = '_flutter_messages';
+      messageElement.style.display = 'none';
+      document.body.appendChild(messageElement);
+      log('Hidden message element created');
+
+      // Poll for messages from Flutter (workaround for evaluateJavascript issues)
+      let pollCount = 0;
+      let lastMessageElementContent = '';
+      setInterval(() => {
+        pollCount++;
+        
+        // Method 1: Check message queue
+        if (window._flutterMessageQueue && window._flutterMessageQueue.length > 0) {
+          const msg = window._flutterMessageQueue.shift();
+          log('Processing queued message: ' + (typeof msg === 'string' ? msg.substring(0, 100) : JSON.stringify(msg).substring(0, 100)));
+          try {
+            const data = typeof msg === 'string' ? JSON.parse(msg) : msg;
+            handleFlutterMessage(data);
+          } catch (e) {
+            log('Error parsing queued message: ' + e.message + ' - Raw: ' + msg);
+          }
+        }
+        
+        // Method 2: Check last message variable
+        if (window._lastFlutterMessage) {
+          const msg = window._lastFlutterMessage;
+          window._lastFlutterMessage = null;
+          log('Processing last message: ' + (typeof msg === 'string' ? msg.substring(0, 100) : JSON.stringify(msg).substring(0, 100)));
+          try {
+            const data = typeof msg === 'string' ? JSON.parse(msg) : msg;
+            handleFlutterMessage(data);
+          } catch (e) {
+            log('Error parsing last message: ' + e.message + ' - Raw: ' + msg);
+          }
+        }
+        
+        // Method 3: Check hidden DOM element content
+        const msgEl = document.getElementById('_flutter_messages');
+        if (msgEl && msgEl.textContent && msgEl.textContent !== lastMessageElementContent) {
+          lastMessageElementContent = msgEl.textContent;
+          log('Processing message from DOM element: ' + lastMessageElementContent.substring(0, 100));
+          try {
+            const data = JSON.parse(lastMessageElementContent);
+            msgEl.textContent = ''; // Clear after reading
+            handleFlutterMessage(data);
+          } catch (e) {
+            log('Error parsing DOM message: ' + e.message);
+          }
+        }
+        
+        // Method 4: Check localStorage (most reliable for web)
+        try {
+          const storageKey = '_flutter_webview_msg';
+          const storageMsg = localStorage.getItem(storageKey);
+          if (storageMsg) {
+            log('Processing message from localStorage: ' + storageMsg.substring(0, 100));
+            localStorage.removeItem(storageKey); // Clear after reading
+            try {
+              const data = JSON.parse(storageMsg);
+              handleFlutterMessage(data);
+            } catch (e) {
+              log('Error parsing localStorage message: ' + e.message);
+            }
+          }
+        } catch (e) {
+          // localStorage might not be available in some contexts
+        }
+        
+        // Method 5: Check URL hash for commands (every few polls)
+        if (pollCount % 10 === 0) {
+          checkURLForCommands();
+        }
+        
+        // Debug logging every 5 seconds
+        if (pollCount % 50 === 0) {
+          const queueLen = window._flutterMessageQueue ? window._flutterMessageQueue.length : 0;
+          const hasLast = window._lastFlutterMessage ? 'yes' : 'no';
+          const hasDOM = msgEl && msgEl.textContent ? 'yes' : 'no';
+          const hash = window.location.hash ? 'yes' : 'no';
+          log(`Polling active - queue: ${queueLen}, last: ${hasLast}, DOM: ${hasDOM}, hash: ${hash}`);
+        }
+      }, 100); // Check every 100ms
+      
+      log('Message polling started');
+
+      // Handle messages from Flutter
+      async function handleFlutterMessage(data) {
+        if (!data) {
+          log('handleFlutterMessage called with null/undefined data');
+          return;
+        }
+        
+        log('Handling Flutter message: type=' + (data.type || 'unknown') + ', data=' + JSON.stringify(data).substring(0, 100));
+
+        if (data.type === 'start') {
+          const token = data.token;
+          const sessionInfo = data.sessionData;
+          
+          if (!token || !sessionInfo) {
+            log('Error: Missing token or session data');
+            return;
+          }
+
+          await connectToHeyGen(token, sessionInfo);
         } else if (data.type === 'backend_base') {
           window._backendBase = data.url;
+          log('Backend base set to: ' + data.url);
+        } else if (data.type === 'record_start') {
+          log('Received record_start command with recordingId: ' + data.recordingId);
+          await startRecording(data.recordingId);
+        } else if (data.type === 'record_stop') {
+          log('Received record_stop command');
+          stopRecording();
+        } else {
+          log('Unknown message type: ' + data.type);
         }
-      });
-      // Placeholder bridge: Flutter will postMessage commands; this page will respond.
-      window.addEventListener('message', (e) => {
-        const data = e.data || {};
-        const log = document.getElementById('log');
-        log.textContent += `\nmsg: ${JSON.stringify(data)}`;
-      });
-      // Hook up webcam preview for immediate UX
-      (async () => {
-        try {
-          const cam = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          document.getElementById('webcam').srcObject = cam;
-        } catch (e) {
-          const log = document.getElementById('log');
-          log.textContent += `\nwebcam error: ${e}`;
+      }
+
+      // Initialize
+      setupWebcam();
+      log('Page loaded - ready for HeyGen connection');
+
+      // Wait for DOM and scripts to load before checking URL
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+          initConnection();
+        });
+      } else {
+        initConnection();
+      }
+      
+      function initConnection() {
+        log('initConnection called - checking for session data...');
+        // Check URL for session data on load
+        const urlSession = getSessionFromURL();
+        log('getSessionFromURL result: ' + (urlSession ? 'found' : 'not found'));
+        
+        if (urlSession && urlSession.token && urlSession.sessionData) {
+          log('Found session data in URL, waiting for LiveKit to load...');
+          log('Session ID: ' + urlSession.sessionData.session_id);
+          log('URL: ' + urlSession.sessionData.url);
+          // Wait for LiveKit script to load
+          waitForLiveKit().then(() => {
+            log('LiveKit loaded, connecting to HeyGen...');
+            connectToHeyGen(urlSession.token, urlSession.sessionData);
+          }).catch((e) => {
+            log('Error waiting for LiveKit: ' + e.message);
+            setStatus('Not Connected', 'disconnected');
+          });
+        } else {
+          log('No session data found in URL. Current URL: ' + window.location.href);
         }
-      })();
+      }
+
     </script>
   </body>
   </html>
-

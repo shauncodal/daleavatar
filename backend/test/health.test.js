@@ -1,7 +1,6 @@
-const request = require('supertest');
-const { createApp } = require('../src/app.js');
-const { describe, it } = require('mocha');
-const { expect } = require('chai');
+import request from 'supertest';
+import { createApp } from '../src/app.js';
+import { describe, it, expect } from 'vitest';
 
 describe('health', () => {
   it('returns ok', async () => {

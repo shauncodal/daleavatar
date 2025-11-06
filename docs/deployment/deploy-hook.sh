@@ -43,8 +43,9 @@ cd app
 export PATH="$PATH:/home/ubuntu/flutter/bin"
 flutter pub get
 
-# Build for web
-flutter build web --release
+# Build for web (production - use relative URLs by setting empty BACKEND_URL)
+# The app will automatically use the current domain for API calls
+flutter build web --release --dart-define=BACKEND_URL=
 
 # Copy build output
 echo -e "${YELLOW}Copying build output...${NC}"
