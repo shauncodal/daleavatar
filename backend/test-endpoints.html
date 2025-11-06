@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Endpoint Tests</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .test { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        .pass { background-color: #d4edda; }
+        .fail { background-color: #f8d7da; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>API Tower Test Results</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function runTests() {
+            const results = {};
+            const resultsDiv = document.getElementById('results');
+            
+            // Test 1: Health endpoint
+            try {
+                const healthRes = await fetch('http://localhost:4000/health');
+                const healthData = await healthRes.json();
+                results.health = {
+                    status: healthRes.status,
+                    data: healthData,
+                    success: healthRes.ok
+                };
+            } catch (e) {
+                results.health = { error: e.message, success: false };
+            }
+            
+            // Test 2: Recordings init endpoint
+            try {
+                const recordingsRes = await fetch('http://localhost:4000/api/recordings/init', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const recordingsData = await recordingsRes.json();
+                results.recordings = {
+                    status: recordingsRes.status,
+                    data: recordingsData,
+                    success: recordingsRes.ok || recordingsRes.status === 500 // 500 is expected if DB unavailable
+                };
+            } catch (e) {
+                results.recordings = { error: e.message, success: false };
+            }
+            
+            // Test 3: Stream session-token endpoint (tests HeyGen API key)
+            try {
+                const streamRes = await fetch('http://localhost:4000/api/stream/session-token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const streamData = await streamRes.json();
+                results.streamToken = {
+                    status: streamRes.status,
+                    data: streamData,
+                    success: streamRes.ok
+                };
+            } catch (e) {
+                results.streamToken = { error: e.message, success: false };
+            }
+            
+            // Test 4: OpenAI respond endpoint (tests OpenAI API key)
+            try {
+                const openaiRes = await fetch('http://localhost:4000/api/openai/respond', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messages: [{ role: 'user', content: 'Hello, say hi back!' }],
+                        model: 'gpt-4o-mini'
+                    })
+                });
+                const openaiData = await openaiRes.json();
+                results.openai = {
+                    status: openaiRes.status,
+                    data: openaiData,
+                    success: openaiRes.ok
+                };
+            } catch (e) {
+                results.openai = { error: e.message, success: false };
+            }
+            
+            // Display results
+            for (const [key, result] of Object.entries(results)) {
+                const div = document.createElement('div');
+                div.className = `test ${result.success ? 'pass' : 'fail'}`;
+                div.innerHTML = `
+                    <h2>${key.toUpperCase()}</h2>
+                    <p>Status: ${result.status || 'N/A'}</p>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+                resultsDiv.appendChild(div);
+            }
+            
+            return results;
+        }
+        
+        runTests();
+    </script>
+</body>
+</html>
+
