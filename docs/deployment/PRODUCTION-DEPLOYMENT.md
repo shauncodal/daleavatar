@@ -9,6 +9,33 @@ Complete guide for deploying to production with SSL on EC2.
 - SSH access to EC2 instance
 - All environment variables ready (HeyGen API key, OpenAI key, database credentials, etc.)
 
+## Two Deployment Options
+
+### Option 1: Simple Git Pull (Recommended if you have git access)
+
+If you have SSH access to your server and prefer a simpler approach:
+
+```bash
+# On EC2, run setup
+cd /tmp
+wget https://raw.githubusercontent.com/shauncodal/daleavatar/main/docs/deployment/setup-simple-deployment.sh
+chmod +x setup-simple-deployment.sh
+sudo ./setup-simple-deployment.sh
+```
+
+Then to deploy updates:
+```bash
+sudo deploy-daleavatar
+# Or manually:
+cd /var/www/daleavatar
+git pull
+./docs/deployment/simple-deploy.sh
+```
+
+### Option 2: Git SSH Push (Automatic deployment)
+
+For automatic deployment on git push (see below).
+
 ## Quick Deployment (All-in-One)
 
 ### Step 1: Run Complete Setup Script
