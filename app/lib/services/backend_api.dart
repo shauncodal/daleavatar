@@ -1,28 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 class BackendApi {
   final String baseUrl;
   String? _authToken;
 
   BackendApi(this.baseUrl);
-  
-  // Get the actual base URL to use (handles empty string for relative URLs)
-  String get _effectiveBaseUrl {
-    if (baseUrl.isEmpty && kIsWeb) {
-      // Use current origin for relative URLs in production
-      // This will be resolved at runtime on web platform
-      try {
-        // ignore: avoid_web_libraries_in_flutter
-        return Uri.base.origin;
-      } catch (e) {
-        // Fallback if not on web
-        return '';
-      }
-    }
-    return baseUrl;
-  }
 
   void setAuthToken(String? token) {
     _authToken = token;
@@ -39,14 +22,14 @@ class BackendApi {
   }
 
   Future<String> createSessionToken() async {
-    final res = await http.post(Uri.parse('$_effectiveBaseUrl/api/stream/session-token'));
+    final res = await http.post(Uri.parse('$baseUrl/api/stream/session-token'));
     final body = jsonDecode(res.body);
     return body['token'];
   }
 
   Future<Map<String, dynamic>> startSession(String token, Map<String, dynamic> startRequest) async {
     final res = await http.post(
-      Uri.parse('$_effectiveBaseUrl/api/stream/new-session'),
+      Uri.parse('$baseUrl/api/stream/new-session'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'token': token, 'startRequest': startRequest}),
     );
@@ -69,7 +52,7 @@ class BackendApi {
 
   Future<void> callStartSession(String sessionId, String token) async {
     await http.post(
-      Uri.parse('$_effectiveBaseUrl/api/stream/start-session'),
+      Uri.parse('$baseUrl/api/stream/start-session'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'sessionId': sessionId, 'token': token}),
     );
@@ -77,25 +60,25 @@ class BackendApi {
 
   Future<void> sendSpeak(String token, String text, {String taskType = 'REPEAT'}) async {
     await http.post(
-      Uri.parse('$_effectiveBaseUrl/api/stream/speak'),
+      Uri.parse('$baseUrl/api/stream/speak'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'token': token, 'text': text, 'taskType': taskType}),
     );
   }
 
   Future<Map<String, dynamic>> listRecordings() async {
-    final res = await http.get(Uri.parse('$_effectiveBaseUrl/api/recordings'));
+    final res = await http.get(Uri.parse('$baseUrl/api/recordings'));
     return {'items': jsonDecode(res.body)};
   }
 
   Future<int> initRecording() async {
-    final res = await http.post(Uri.parse('$_effectiveBaseUrl/api/recordings/init'));
+    final res = await http.post(Uri.parse('$baseUrl/api/recordings/init'));
     final body = jsonDecode(res.body);
     return body['id'] as int;
   }
 
   Future<void> uploadCompositeWebm(int id, String dataUrl) async {
-    await http.post(Uri.parse('$_effectiveBaseUrl/api/recordings/upload/$id'),
+    await http.post(Uri.parse('$baseUrl/api/recordings/upload/$id'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'webmBase64': dataUrl}));
   }
@@ -103,7 +86,7 @@ class BackendApi {
   // Auth methods
   Future<Map<String, dynamic>> register(String email, String password, {String? name}) async {
     final res = await http.post(
-      Uri.parse('$_effectiveBaseUrl/api/auth/register'),
+      Uri.parse('$baseUrl/api/auth/register'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password, 'name': name}),
     );
@@ -122,7 +105,7 @@ class BackendApi {
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     final res = await http.post(
-      Uri.parse('$_effectiveBaseUrl/api/auth/login'),
+      Uri.parse('$baseUrl/api/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
@@ -141,7 +124,7 @@ class BackendApi {
 
   Future<Map<String, dynamic>> getProfile() async {
     final res = await http.get(
-      Uri.parse('$_effectiveBaseUrl/api/auth/me'),
+      Uri.parse('$baseUrl/api/auth/me'),
       headers: _getHeaders(),
     );
     
@@ -155,7 +138,7 @@ class BackendApi {
 
   Future<void> updateProfile({String? name, Map<String, dynamic>? profileSettings}) async {
     final res = await http.put(
-      Uri.parse('$_effectiveBaseUrl/api/auth/profile'),
+      Uri.parse('$baseUrl/api/auth/profile'),
       headers: _getHeaders(),
       body: jsonEncode({'name': name, 'profileSettings': profileSettings}),
     );
@@ -168,7 +151,7 @@ class BackendApi {
 
   Future<void> changePassword(String currentPassword, String newPassword) async {
     final res = await http.post(
-      Uri.parse('$_effectiveBaseUrl/api/auth/change-password'),
+      Uri.parse('$baseUrl/api/auth/change-password'),
       headers: _getHeaders(),
       body: jsonEncode({'currentPassword': currentPassword, 'newPassword': newPassword}),
     );
@@ -181,7 +164,7 @@ class BackendApi {
 
   // Course methods
   Future<List<dynamic>> listCourses() async {
-    final res = await http.get(Uri.parse('$_effectiveBaseUrl/api/courses'));
+    final res = await http.get(Uri.parse('$baseUrl/api/courses'));
     if (res.statusCode != 200) {
       throw Exception('Failed to fetch courses');
     }
@@ -189,7 +172,7 @@ class BackendApi {
   }
 
   Future<Map<String, dynamic>> getCourse(int courseId) async {
-    final res = await http.get(Uri.parse('$_effectiveBaseUrl/api/courses/$courseId'));
+    final res = await http.get(Uri.parse('$baseUrl/api/courses/$courseId'));
     if (res.statusCode != 200) {
       throw Exception('Failed to fetch course');
     }
@@ -198,7 +181,7 @@ class BackendApi {
 
   Future<void> enrollInCourse(int courseId) async {
     final res = await http.post(
-      Uri.parse('$_effectiveBaseUrl/api/courses/$courseId/enroll'),
+      Uri.parse('$baseUrl/api/courses/$courseId/enroll'),
       headers: _getHeaders(),
     );
     
@@ -210,7 +193,7 @@ class BackendApi {
 
   Future<List<dynamic>> getUserEnrollments() async {
     final res = await http.get(
-      Uri.parse('$_effectiveBaseUrl/api/courses/user/enrollments'),
+      Uri.parse('$baseUrl/api/courses/user/enrollments'),
       headers: _getHeaders(),
     );
     
@@ -223,7 +206,7 @@ class BackendApi {
   // Dashboard methods
   Future<Map<String, dynamic>> getDashboard() async {
     final res = await http.get(
-      Uri.parse('$_effectiveBaseUrl/api/dashboard'),
+      Uri.parse('$baseUrl/api/dashboard'),
       headers: _getHeaders(),
     );
     
@@ -236,7 +219,7 @@ class BackendApi {
   // Progress methods
   Future<void> updateProgress(int enrollmentId, {double? completionPercentage, int? currentStep}) async {
     final res = await http.put(
-      Uri.parse('$_effectiveBaseUrl/api/progress/$enrollmentId'),
+      Uri.parse('$baseUrl/api/progress/$enrollmentId'),
       headers: _getHeaders(),
       body: jsonEncode({
         if (completionPercentage != null) 'completionPercentage': completionPercentage,
@@ -251,7 +234,7 @@ class BackendApi {
 
   Future<void> recordChoice(int enrollmentId, String decisionPoint, String choiceMade, {int? choiceScore, String? feedback}) async {
     final res = await http.post(
-      Uri.parse('$_effectiveBaseUrl/api/progress/$enrollmentId/choices'),
+      Uri.parse('$baseUrl/api/progress/$enrollmentId/choices'),
       headers: _getHeaders(),
       body: jsonEncode({
         'decisionPoint': decisionPoint,
@@ -268,7 +251,7 @@ class BackendApi {
 
   Future<Map<String, dynamic>> getAnalytics(int enrollmentId) async {
     final res = await http.get(
-      Uri.parse('$_effectiveBaseUrl/api/progress/$enrollmentId/analytics'),
+      Uri.parse('$baseUrl/api/progress/$enrollmentId/analytics'),
       headers: _getHeaders(),
     );
     
@@ -281,7 +264,7 @@ class BackendApi {
   // Notification methods
   Future<List<dynamic>> getNotifications({bool unreadOnly = false, int limit = 50}) async {
     final res = await http.get(
-      Uri.parse('$_effectiveBaseUrl/api/notifications?unread_only=$unreadOnly&limit=$limit'),
+      Uri.parse('$baseUrl/api/notifications?unread_only=$unreadOnly&limit=$limit'),
       headers: _getHeaders(),
     );
     
@@ -293,7 +276,7 @@ class BackendApi {
 
   Future<void> markNotificationRead(int notificationId) async {
     final res = await http.put(
-      Uri.parse('$_effectiveBaseUrl/api/notifications/$notificationId/read'),
+      Uri.parse('$baseUrl/api/notifications/$notificationId/read'),
       headers: _getHeaders(),
     );
     
@@ -304,7 +287,7 @@ class BackendApi {
 
   Future<void> markAllNotificationsRead() async {
     final res = await http.post(
-      Uri.parse('$_effectiveBaseUrl/api/notifications/read-all'),
+      Uri.parse('$baseUrl/api/notifications/read-all'),
       headers: _getHeaders(),
     );
     

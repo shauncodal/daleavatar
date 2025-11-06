@@ -62,10 +62,7 @@ class _HomeRouterState extends State<_HomeRouter> {
   @override
   void initState() {
     super.initState();
-    // For production, use empty string to use relative URLs (same domain)
-    // For local development, use http://localhost:4000
-    final backendUrl = const String.fromEnvironment('BACKEND_URL', defaultValue: 'http://localhost:4000');
-    _api = BackendApi(backendUrl.isEmpty ? '' : backendUrl);
+    _api = BackendApi(const String.fromEnvironment('BACKEND_URL', defaultValue: 'http://localhost:4000'));
     _checkAuthState();
   }
 
