@@ -410,7 +410,7 @@ class _SessionLobbyScreenState extends State<SessionLobbyScreen> {
         borderRadius: BorderRadius.circular(14),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

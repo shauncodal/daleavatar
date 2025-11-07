@@ -77,17 +77,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   SizedBox(
                     width: 192,
                     height: 153,
-                    child: Image.network(
-                      'http://localhost:4000/assets/aca899cc6e347e28f97ce9acd2e639a261a0e8fb.png',
+                    child: Image.asset(
+                      'assets/images/dale_logo.png',
                       fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        // Fallback if image can't load
-                        return Icon(
-                          Icons.account_circle,
-                          size: 192,
-                          color: textPrimary,
-                        );
-                      },
                     ),
                   ),
                   

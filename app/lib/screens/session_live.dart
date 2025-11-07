@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import '../services/backend_api.dart';
 import '../widgets/avatar_webview.dart';
-import 'stop_simulation_modal.dart';
 import 'analysis_loading_screen.dart';
 
 class SessionLiveScreen extends StatefulWidget {
@@ -18,7 +17,6 @@ class _SessionLiveScreenState extends State<SessionLiveScreen> {
   bool _isSimulationActive = false;
   int? _recordingId; // Used for recording tracking
   final _webKey = GlobalKey<AvatarWebViewState>();
-  bool _isModalOpen = false;
 
   // Figma Design Colors
   static const backgroundColor = Color(0xFF000000); // Black
@@ -100,128 +98,50 @@ class _SessionLiveScreenState extends State<SessionLiveScreen> {
     debugPrint('🔴 [STOP SIMULATION] ========== _stopSimulation called ==========');
     print('🔴 [STOP SIMULATION] ========== _stopSimulation called ==========');
     
-    // Disable webview interaction when modal opens
+    if (!mounted) return;
+    
+    // Stop recording first
+    await _stopRecording();
+    // Then stop the session
+    // ignore: invalid_use_of_protected_member
+    await (_webKey.currentState)?.send({'type': 'stop'});
+    
+    // Generate default recording name based on current date/time
+    final now = DateTime.now();
+    final recordingName = 'Simulation ${_formatDate(now)} - ${_formatTime(now)}';
+    
+    // Create recording data for navigation
+    final recordingData = {
+      'id': _recordingId ?? 0,
+      'name': recordingName,
+      'created_at': now.toIso8601String(),
+      'status': 'ready',
+      'duration_ms': 0, // Will be updated when recording is processed
+    };
+    
+    // Navigate directly to loading screen
     if (mounted) {
-      setState(() {
-        _isModalOpen = true;
-      });
-    }
-    
-    // Disable pointer events on webview iframe (for web platform)
-    await (_webKey.currentState)?.setPointerEventsEnabled(false);
-    
-    // Use showGeneralDialog with full-screen blocking layer
-    final result = await showGeneralDialog<String>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Stop Simulation',
-      barrierColor: Colors.black.withOpacity(0.7),
-      useRootNavigator: true,
-      transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return Material(
-          type: MaterialType.transparency,
-          child: Stack(
-            children: [
-              // Full-screen blocking layer
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    // Allow tapping outside to dismiss
-                    Navigator.of(context).pop(null);
-                  },
-                  child: Container(
-                    color: Colors.transparent,
-                  ),
-                ),
-              ),
-              // Modal content
-              Center(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    // Prevent taps on modal from dismissing
-                  },
-                  child: StopSimulationModal(
-                    onConfirm: (recordingName) {
-                      debugPrint('🟢 [STOP SIMULATION] ========== Modal onConfirm called with name: $recordingName ==========');
-                      print('🟢 [STOP SIMULATION] ========== Modal onConfirm called with name: $recordingName ==========');
-                      Navigator.of(context).pop(recordingName);
-                      debugPrint('🟢 [STOP SIMULATION] Navigator.pop called with result: $recordingName');
-                      print('🟢 [STOP SIMULATION] Navigator.pop called with result: $recordingName');
-                    },
-                    onCancel: () {
-                      debugPrint('🟢 [STOP SIMULATION] ========== Modal onCancel called ==========');
-                      print('🟢 [STOP SIMULATION] ========== Modal onCancel called ==========');
-                      Navigator.of(context).pop(null);
-                      debugPrint('🟢 [STOP SIMULATION] Navigator.pop called (cancel)');
-                      print('🟢 [STOP SIMULATION] Navigator.pop called (cancel)');
-                    },
-                  ),
-                ),
-              ),
-            ],
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => AnalysisLoadingScreen(
+            recordingId: _recordingId ?? 0,
+            recording: recordingData,
           ),
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: animation,
-          child: ScaleTransition(
-            scale: Tween<double>(begin: 0.9, end: 1.0).animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeOut),
-            ),
-            child: child,
-          ),
-        );
-      },
-    );
-    
-    debugPrint('🔴 [STOP SIMULATION] ========== Modal returned with result: $result ==========');
-    print('🔴 [STOP SIMULATION] ========== Modal returned with result: $result ==========');
-    
-    // Re-enable webview pointer events
-    await (_webKey.currentState)?.setPointerEventsEnabled(true);
-    
-    // Re-enable webview interaction when modal closes
-    if (mounted) {
-      setState(() {
-        _isModalOpen = false;
-      });
+        ),
+      );
     }
-    
-    // Only proceed if user confirmed (result is not null and not empty)
-    // If user cancelled, result will be null and we just return
-    if (result != null && result.isNotEmpty && mounted) {
-      // Stop recording first
-      await _stopRecording();
-      // Then stop the session
-      // ignore: invalid_use_of_protected_member
-      await (_webKey.currentState)?.send({'type': 'stop'});
-      
-      // Create recording data for navigation
-      final recordingData = {
-        'id': _recordingId ?? 0,
-        'name': result,
-        'created_at': DateTime.now().toIso8601String(),
-        'status': 'ready',
-        'duration_ms': 0, // Will be updated when recording is processed
-      };
-      
-      // Navigate to loading screen
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => AnalysisLoadingScreen(
-              recordingId: _recordingId ?? 0,
-              recording: recordingData,
-            ),
-          ),
-        );
-      }
-    }
-    // If result is null (user cancelled), do nothing - simulation continues
+  }
+  
+  String _formatDate(DateTime date) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[date.month - 1]} ${date.day}';
+  }
+  
+  String _formatTime(DateTime date) {
+    final hour = date.hour == 0 ? 12 : (date.hour > 12 ? date.hour - 12 : date.hour);
+    final minute = date.minute.toString().padLeft(2, '0');
+    final period = date.hour < 12 ? 'AM' : 'PM';
+    return '$hour:$minute $period';
   }
 
   Future<void> _startRecording() async {
@@ -276,31 +196,15 @@ class _SessionLiveScreenState extends State<SessionLiveScreen> {
                                       child: SizedBox(
                                         width: double.infinity,
                                         height: double.infinity,
-                                        child: AbsorbPointer(
-                                          absorbing: _isModalOpen,
-                                          child: IgnorePointer(
-                                            ignoring: _isModalOpen,
-                                            child: AvatarWebView(
-                                              key: _webKey,
-                                              onMessage: (msg) {
-                                                // Handle messages if needed
-                                              },
-                                            ),
-                                          ),
+                                        child: AvatarWebView(
+                                          key: _webKey,
+                                          onMessage: (msg) {
+                                            // Handle messages if needed
+                                          },
                                         ),
                                       ),
                                     ),
                                   ),
-                                  // Full-screen overlay to block webview when modal is open
-                                  if (_isModalOpen)
-                                    Positioned.fill(
-                                      child: AbsorbPointer(
-                                        absorbing: true,
-                                        child: Container(
-                                          color: Colors.transparent,
-                                        ),
-                                      ),
-                                    ),
                                 ],
                               )
                             : (isMobile

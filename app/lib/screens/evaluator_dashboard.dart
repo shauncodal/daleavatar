@@ -40,16 +40,9 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                     SizedBox(
                       width: 40,
                       height: 32,
-                      child: Image.network(
-                        'http://localhost:4000/assets/aca899cc6e347e28f97ce9acd2e639a261a0e8fb.png',
+                      child: Image.asset(
+                        'assets/images/dale_logo.png',
                         fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 40,
-                            height: 32,
-                            color: limeColor,
-                          );
-                        },
                       ),
                     ),
                     Container(
@@ -97,7 +90,10 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                         },
                       ),
                       onPressed: () {
-                        // Settings action
+                        // TODO: Open settings panel
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Settings coming soon')),
+                        );
                       },
                     ),
                     IconButton(
@@ -140,7 +136,12 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                                 return Icon(Icons.calendar_today, size: 16, color: textPrimary);
                               },
                             ),
-                            onPressed: () {},
+                            onPressed: () {
+                              // TODO: Open date picker
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Date picker coming soon')),
+                              );
+                            },
                           ),
                           Container(
                             height: 36,
@@ -173,12 +174,24 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                                   child: Text(value),
                                 );
                               }).toList(),
-                              onChanged: (String? newValue) {},
+                              onChanged: (String? newValue) {
+                                // TODO: Update date range filter
+                                if (newValue != null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Filter changed to: $newValue')),
+                                  );
+                                }
+                              },
                             ),
                           ),
                           const SizedBox(width: 16),
                           TextButton.icon(
-                            onPressed: () {},
+                            onPressed: () {
+                              // TODO: Show comparison view
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Comparison view coming soon')),
+                              );
+                            },
                             icon: Image.network(
                               'http://localhost:4000/assets/497540032d54ac2d8d5da41a3597a6ae9ffdfa89.svg',
                               width: 16,
@@ -203,7 +216,12 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                       Row(
                         children: [
                           TextButton.icon(
-                            onPressed: () {},
+                            onPressed: () {
+                              // TODO: Export to CSV
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('CSV export coming soon')),
+                              );
+                            },
                             icon: Image.network(
                               'http://localhost:4000/assets/0d27f6ee5444ef9432334954356f4b559eca73fa.svg',
                               width: 16,
@@ -225,7 +243,12 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           TextButton.icon(
-                            onPressed: () {},
+                            onPressed: () {
+                              // TODO: Export to PDF
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('PDF export coming soon')),
+                              );
+                            },
                             icon: Image.network(
                               'http://localhost:4000/assets/e01c151b5c87c77e876624fcd90c34273ffc837b.svg',
                               width: 16,
@@ -352,6 +375,7 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                   Column(
                     children: [
                       _buildAlertCard(
+                        context: context,
                         name: 'Emily Rodriguez',
                         priority: 'HIGH',
                         message: 'No activity in the last 24 hours. Average score dropped by 15% this week.',
@@ -360,6 +384,7 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       _buildAlertCard(
+                        context: context,
                         name: 'Jessica Martinez',
                         priority: 'HIGH',
                         message: 'Hasn\'t completed a recording in 3 days. Below target completion rate.',
@@ -368,6 +393,7 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       _buildAlertCard(
+                        context: context,
                         name: 'Michael Chen',
                         priority: 'MEDIUM',
                         message: 'Confidence scores consistently below 70% in last 5 recordings.',
@@ -527,6 +553,7 @@ class EvaluatorDashboardScreen extends StatelessWidget {
   }
 
   Widget _buildAlertCard({
+    required BuildContext context,
     required String name,
     required String priority,
     required String message,
@@ -615,7 +642,12 @@ class EvaluatorDashboardScreen extends StatelessWidget {
             ),
           ),
           TextButton(
-            onPressed: () {},
+            onPressed: () {
+              // TODO: View alert details
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Alert details coming soon')),
+              );
+            },
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

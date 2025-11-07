@@ -46,6 +46,8 @@ enum AuthScreen { login, register, forgotPassword }
 
 enum DashboardType { student, evaluator }
 
+const String _kLogoAsset = 'assets/images/dale_logo.png';
+
 class _HomeRouterState extends State<_HomeRouter> {
   bool _showSettingsPanel = false;
   bool _showNotificationsPanel = false;
@@ -63,7 +65,10 @@ class _HomeRouterState extends State<_HomeRouter> {
   void initState() {
     super.initState();
     _api = BackendApi(const String.fromEnvironment('BACKEND_URL', defaultValue: 'http://localhost:4000'));
-    _checkAuthState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _checkAuthState();
+    });
   }
 
   Future<void> _checkAuthState() async {
@@ -337,9 +342,7 @@ class _HomeRouterState extends State<_HomeRouter> {
   Widget build(BuildContext context) {
     // Show loading while checking auth state
     if (_isLoadingAuth) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const AppSplashScreen(logoAssetPath: _kLogoAsset);
     }
 
     // Show auth screens if not authenticated
@@ -1069,6 +1072,61 @@ class _HomeRouterState extends State<_HomeRouter> {
               Icons.chevron_right,
               size: 16,
               color: cardBorder,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AppSplashScreen extends StatelessWidget {
+  final String logoAssetPath;
+
+  const AppSplashScreen({super.key, required this.logoAssetPath});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF000000),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 180,
+              height: 90,
+              decoration: BoxDecoration(
+                color: const Color(0xFF141820),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFF1A2E23),
+                  width: 1,
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+              child: Image.asset(
+                logoAssetPath,
+                fit: BoxFit.contain,
+              ),
+            ),
+            const SizedBox(height: 32),
+            const SizedBox(
+              width: 36,
+              height: 36,
+              child: CircularProgressIndicator(
+                strokeWidth: 3,
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFBEF264)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Preparing your simulation experience...',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: const Color(0xFFA1A7B8),
+                    letterSpacing: -0.15,
+                  ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
