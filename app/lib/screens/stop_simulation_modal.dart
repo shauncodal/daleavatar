@@ -88,25 +88,18 @@ class _StopSimulationModalState extends State<StopSimulationModal> {
           children: [
             // Icon Section
             Center(
-              child: Image.network(
-                'http://localhost:4000/assets/db8a99c5e24d85ce035d6b1eef035f6b21d6f1ee.svg',
+              child: Container(
                 width: 48,
                 height: 48,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: red400.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.warning_amber_rounded,
-                      size: 32,
-                      color: red400,
-                    ),
-                  );
-                },
+                decoration: BoxDecoration(
+                  color: red400.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.warning_amber_rounded,
+                  size: 32,
+                  color: red400,
+                ),
               ),
             ),
             const SizedBox(height: 16),

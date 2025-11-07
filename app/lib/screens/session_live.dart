@@ -247,20 +247,13 @@ class _SessionLiveScreenState extends State<SessionLiveScreen> {
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.network(
-                    'http://localhost:4000/assets/4eb729752ccb6b2b8a87b59deb64187ccfe2b1e1.svg',
-                    width: 16,
-                    height: 16,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.arrow_back,
-                        size: 16,
-                        color: textPrimary,
-                      );
-                    },
+                children: const [
+                  Icon(
+                    Icons.arrow_back,
+                    size: 16,
+                    color: textPrimary,
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   const Text(
                     'Exit',
                     style: TextStyle(
@@ -306,17 +299,10 @@ class _SessionLiveScreenState extends State<SessionLiveScreen> {
             ),
             child: Center(
               child: isLeft
-                  ? Image.network(
-                      'http://localhost:4000/assets/e007e7276845e1f0a7a3084ba94b6728e233e73a.svg',
-                      width: 32,
-                      height: 32,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.videocam,
-                          size: 32,
-                          color: textSecondary,
-                        );
-                      },
+                  ? Icon(
+                      Icons.videocam,
+                      size: 32,
+                      color: textSecondary,
                     )
                   : const Text(
                       '🎭',
@@ -422,21 +408,14 @@ class _SessionLiveScreenState extends State<SessionLiveScreen> {
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.network(
-                      'http://localhost:4000/assets/4f3e9354fda0c61d64630d0fc899b11a365d960b.svg',
-                      width: 16,
-                      height: 16,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.play_arrow,
-                          size: 16,
-                          color: Colors.black,
-                        );
-                      },
+                  children: const [
+                    Icon(
+                      Icons.play_arrow,
+                      size: 16,
+                      color: Colors.black,
                     ),
-                    const SizedBox(width: 8),
-                    const Text(
+                    SizedBox(width: 8),
+                    Text(
                       'Start Simulation',
                       style: TextStyle(
                         fontFamily: 'Inter',

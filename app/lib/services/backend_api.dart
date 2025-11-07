@@ -5,7 +5,27 @@ class BackendApi {
   final String baseUrl;
   String? _authToken;
 
-  BackendApi(this.baseUrl);
+  BackendApi(String baseUrl)
+      : baseUrl = _normalizeBaseUrl(baseUrl);
+
+  static String _normalizeBaseUrl(String url) {
+    var normalized = url.trim();
+    if (normalized.isEmpty) {
+      return '';
+    }
+
+    // Remove trailing slashes
+    while (normalized.endsWith('/')) {
+      normalized = normalized.substring(0, normalized.length - 1);
+    }
+
+    // Remove trailing /api if present so we don't duplicate it later
+    if (normalized.toLowerCase().endsWith('/api')) {
+      normalized = normalized.substring(0, normalized.length - 4);
+    }
+
+    return normalized;
+  }
 
   void setAuthToken(String? token) {
     _authToken = token;

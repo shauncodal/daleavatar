@@ -83,17 +83,10 @@ class _AddNoteModalState extends State<AddNoteModal> {
               right: 17,
               top: 17,
               child: IconButton(
-                icon: Image.network(
-                  'http://localhost:4000/assets/bc698c00086d4d8aa5dd378efab00949f9802842.svg',
-                  width: 16,
-                  height: 16,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(
-                      Icons.close,
-                      size: 16,
-                      color: textPrimary,
-                    );
-                  },
+                icon: const Icon(
+                  Icons.close,
+                  size: 16,
+                  color: textPrimary,
                 ),
                 onPressed: () => Navigator.of(context).pop(),
                 padding: EdgeInsets.zero,

@@ -59,14 +59,7 @@ class MemberDetailsScreen extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 16),
                   child: TextButton.icon(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: Image.network(
-                      'http://localhost:4000/assets/4eb729752ccb6b2b8a87b59deb64187ccfe2b1e1.svg',
-                      width: 16,
-                      height: 16,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Icon(Icons.arrow_back, size: 16, color: textPrimary);
-                      },
-                    ),
+                    icon: const Icon(Icons.arrow_back, size: 16, color: textPrimary),
                     label: Text(
                       'Back to Team',
                       style: TextStyle(
@@ -211,14 +204,7 @@ class MemberDetailsScreen extends StatelessWidget {
                           onPressed: () {
                             // Message action
                           },
-                          icon: Image.network(
-                            'http://localhost:4000/assets/2064c17cfd1cfa46e4a12f2d22dbcfbeed15c002.svg',
-                            width: 16,
-                            height: 16,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(Icons.message, size: 16, color: textPrimary);
-                            },
-                          ),
+                          icon: Icon(Icons.message_outlined, size: 16, color: textPrimary),
                           label: Text(
                             'Message',
                             style: TextStyle(
@@ -251,14 +237,7 @@ class MemberDetailsScreen extends StatelessWidget {
                       Row(
                         children: [
                           IconButton(
-                            icon: Image.network(
-                              'http://localhost:4000/assets/225b42b56819cf3873c09f81c108d3a2940a23e6.svg',
-                              width: 16,
-                              height: 16,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(Icons.calendar_today, size: 16, color: textPrimary);
-                              },
-                            ),
+                            icon: Icon(Icons.calendar_today, size: 16, color: textPrimary),
                             onPressed: () {},
                           ),
                           Container(
@@ -278,14 +257,7 @@ class MemberDetailsScreen extends StatelessWidget {
                                 letterSpacing: -0.15,
                               ),
                               underline: Container(),
-                              icon: Image.network(
-                                'http://localhost:4000/assets/10c76be7e9d771a3b66305dcf0d25e8012490d5a.svg',
-                                width: 16,
-                                height: 16,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Icon(Icons.arrow_drop_down, size: 16, color: textPrimary);
-                                },
-                              ),
+                              icon: Icon(Icons.arrow_drop_down, size: 16, color: textPrimary),
                               items: ['Last 7 Days', 'Last 30 Days', 'Last 90 Days'].map((String value) {
                                 return DropdownMenuItem<String>(
                                   value: value,
@@ -305,7 +277,7 @@ class MemberDetailsScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: _buildPerformanceMetricCard(
-                          icon: 'http://localhost:4000/assets/571f8325dafc9dc62866f74d5490f131db87bda5.svg',
+                          icon: Icons.video_collection_outlined,
                           label: 'Total Recordings',
                           value: '4',
                           valueColor: limeColor,
@@ -315,7 +287,7 @@ class MemberDetailsScreen extends StatelessWidget {
                       const SizedBox(width: 16),
                       Expanded(
                         child: _buildPerformanceMetricCard(
-                          icon: 'http://localhost:4000/assets/2ac744a1896e065b2a73229b99910c857ed370de.svg',
+                          icon: Icons.bar_chart_outlined,
                           label: 'Average Score',
                           value: '65',
                           valueColor: const Color(0xFF00BC7D),
@@ -325,7 +297,7 @@ class MemberDetailsScreen extends StatelessWidget {
                       const SizedBox(width: 16),
                       Expanded(
                         child: _buildPerformanceMetricCard(
-                          icon: 'http://localhost:4000/assets/81a8adb99ee898ead282150759e6d83bca9a43d9.svg',
+                          icon: Icons.people_outline,
                           label: 'Avg Engagement',
                           value: '63',
                           valueColor: const Color(0xFF2B7FFF),
@@ -335,7 +307,7 @@ class MemberDetailsScreen extends StatelessWidget {
                       const SizedBox(width: 16),
                       Expanded(
                         child: _buildPerformanceMetricCard(
-                          icon: 'http://localhost:4000/assets/2ac744a1896e065b2a73229b99910c857ed370de.svg',
+                          icon: Icons.self_improvement_outlined,
                           label: 'Avg Confidence',
                           value: '59',
                           valueColor: const Color(0xFFAD46FF),
@@ -423,7 +395,7 @@ class MemberDetailsScreen extends StatelessWidget {
   }
 
   Widget _buildPerformanceMetricCard({
-    required String icon,
+    required IconData icon,
     required String label,
     required String value,
     required Color valueColor,
@@ -445,14 +417,7 @@ class MemberDetailsScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Image.network(
-                icon,
-                width: 14,
-                height: 14,
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(Icons.analytics, size: 14, color: textSecondary);
-                },
-              ),
+              Icon(icon, size: 14, color: textSecondary),
               const SizedBox(width: 8),
               Text(
                 label,
@@ -740,14 +705,7 @@ class MemberDetailsScreen extends StatelessWidget {
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    icon: Image.network(
-                      'http://localhost:4000/assets/f060817470540f23cb8b08effd719a06ba046553.svg',
-                      width: 16,
-                      height: 16,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Icon(Icons.description, size: 16, color: textPrimary);
-                      },
-                    ),
+                    icon: Icon(Icons.description_outlined, size: 16, color: textPrimary),
                     label: Flexible(
                       child: Text(
                         'View Report',
@@ -782,14 +740,7 @@ class MemberDetailsScreen extends StatelessWidget {
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    icon: Image.network(
-                      'http://localhost:4000/assets/c0044b399e37eeb23b3e52201dd6c822db6bc037.svg',
-                      width: 16,
-                      height: 16,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Icon(Icons.comment, size: 16, color: textPrimary);
-                      },
-                    ),
+                    icon: Icon(Icons.comment_outlined, size: 16, color: textPrimary),
                     label: Flexible(
                       child: Row(
                         mainAxisSize: MainAxisSize.min,

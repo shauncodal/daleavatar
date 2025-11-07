@@ -162,7 +162,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 controller: _nameController,
                                 label: 'Full Name',
                                 hint: 'John Doe',
-                                iconPath: 'http://localhost:4000/assets/edf5b71909344e0117d1849a5daa23e9d600788e.svg',
+                                icon: Icons.person_outline,
                                 keyboardType: TextInputType.name,
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
@@ -182,7 +182,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 controller: _emailController,
                                 label: 'Email',
                                 hint: 'you@example.com',
-                                iconPath: 'http://localhost:4000/assets/746b11dc029d6d3e3824c13b7cd3730493b2aee9.svg',
+                                icon: Icons.email_outlined,
                                 keyboardType: TextInputType.emailAddress,
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
@@ -205,7 +205,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 controller: _companyController,
                                 label: 'Company',
                                 hint: 'Your Company',
-                                iconPath: 'http://localhost:4000/assets/5999e6e006c174bcd5ad202434530508c53765f5.svg',
+                                icon: Icons.business_outlined,
                                 keyboardType: TextInputType.text,
                                 validator: (value) {
                                   // Company is optional, so no validation required
@@ -223,7 +223,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 controller: _passwordController,
                                 label: 'Password',
                                 hint: '••••••••',
-                                iconPath: 'http://localhost:4000/assets/62e0968f32ca5c317f204c214deaf8f8402fbabe.svg',
+                                icon: Icons.lock_outline,
                                 obscureText: _obscurePassword,
                                 onToggleVisibility: () {
                                   setState(() => _obscurePassword = !_obscurePassword);
@@ -249,7 +249,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 controller: _confirmPasswordController,
                                 label: 'Confirm Password',
                                 hint: '••••••••',
-                                iconPath: 'http://localhost:4000/assets/62e0968f32ca5c317f204c214deaf8f8402fbabe.svg',
+                                icon: Icons.lock_outline,
                                 obscureText: _obscureConfirmPassword,
                                 onToggleVisibility: () {
                                   setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
@@ -391,7 +391,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required TextEditingController controller,
     required String label,
     required String hint,
-    required String iconPath,
+    required IconData icon,
     required TextInputType keyboardType,
     required String? Function(String?) validator,
     required Color textColor,
@@ -443,29 +443,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: Image.network(
-                    iconPath,
-                    errorBuilder: (context, error, stackTrace) {
-                      IconData icon;
-                      if (label.contains('Name') || label.contains('Full')) {
-                        icon = Icons.person_outlined;
-                      } else if (label.contains('Email')) {
-                        icon = Icons.email_outlined;
-                      } else if (label.contains('Company')) {
-                        icon = Icons.business_outlined;
-                      } else {
-                        icon = Icons.lock_outlined;
-                      }
-                      return Icon(
-                        icon,
-                        size: 20,
-                        color: hintColor,
-                      );
-                    },
-                  ),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: hintColor,
                 ),
               ),
               filled: true,
@@ -486,7 +467,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required TextEditingController controller,
     required String label,
     required String hint,
-    required String iconPath,
+    required IconData icon,
     required bool obscureText,
     required VoidCallback onToggleVisibility,
     required String? Function(String?) validator,
@@ -539,19 +520,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: Image.network(
-                    iconPath,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(
-                        Icons.lock_outlined,
-                        size: 20,
-                        color: hintColor,
-                      );
-                    },
-                  ),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: hintColor,
                 ),
               ),
               suffixIcon: IconButton(

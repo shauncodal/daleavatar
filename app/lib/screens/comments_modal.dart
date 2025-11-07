@@ -82,14 +82,7 @@ class _CommentsModalState extends State<CommentsModal> {
                     ),
                   ),
                   IconButton(
-                    icon: Image.network(
-                      'http://localhost:4000/assets/bc698c00086d4d8aa5dd378efab00949f9802842.svg',
-                      width: 16,
-                      height: 16,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Icon(Icons.close, size: 16, color: textPrimary);
-                      },
-                    ),
+                    icon: Icon(Icons.close, size: 16, color: textPrimary),
                     onPressed: () => Navigator.of(context).pop(),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -172,14 +165,7 @@ class _CommentsModalState extends State<CommentsModal> {
                                   ),
                                   const SizedBox(width: 8),
                                   IconButton(
-                                    icon: Image.network(
-                                      'http://localhost:4000/assets/b4d781071bd960af9546b85dea18582dad217124.svg',
-                                      width: 16,
-                                      height: 16,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Icon(Icons.more_vert, size: 16, color: textPrimary);
-                                      },
-                                    ),
+                                    icon: Icon(Icons.more_vert, size: 16, color: textPrimary),
                                     onPressed: () {
                                       // Show menu options
                                     },
@@ -295,16 +281,9 @@ class _CommentsModalState extends State<CommentsModal> {
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.network(
-                              'http://localhost:4000/assets/5d7ca75ccfaa432ed6ee234e9630aca3d295056a.svg',
-                              width: 16,
-                              height: 16,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(Icons.add, size: 16, color: Colors.black);
-                              },
-                            ),
-                            const SizedBox(width: 8),
+                          children: const [
+                            Icon(Icons.add, size: 16, color: Colors.black),
+                            SizedBox(width: 8),
                             Text(
                               'Add Comment',
                               style: TextStyle(

@@ -155,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 controller: _emailController,
                                 label: 'Email',
                                 hint: 'you@example.com',
-                                iconPath: 'http://localhost:4000/assets/746b11dc029d6d3e3824c13b7cd3730493b2aee9.svg',
+                                icon: Icons.email_outlined,
                                 keyboardType: TextInputType.emailAddress,
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
@@ -178,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 controller: _passwordController,
                                 label: 'Password',
                                 hint: '••••••••',
-                                iconPath: 'http://localhost:4000/assets/62e0968f32ca5c317f204c214deaf8f8402fbabe.svg',
+                                icon: Icons.lock_outline,
                                 obscureText: _obscurePassword,
                                 onToggleVisibility: () {
                                   setState(() => _obscurePassword = !_obscurePassword);
@@ -431,7 +431,7 @@ class _LoginScreenState extends State<LoginScreen> {
     required TextEditingController controller,
     required String label,
     required String hint,
-    required String iconPath,
+    required IconData icon,
     required TextInputType keyboardType,
     required String? Function(String?) validator,
     required Color textColor,
@@ -483,21 +483,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: Image.network(
-                    iconPath,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(
-                        keyboardType == TextInputType.emailAddress 
-                            ? Icons.email_outlined 
-                            : Icons.lock_outlined,
-                        size: 20,
-                        color: hintColor,
-                      );
-                    },
-                  ),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: hintColor,
                 ),
               ),
               filled: true,
@@ -518,7 +507,7 @@ class _LoginScreenState extends State<LoginScreen> {
     required TextEditingController controller,
     required String label,
     required String hint,
-    required String iconPath,
+    required IconData icon,
     required bool obscureText,
     required VoidCallback onToggleVisibility,
     required String? Function(String?) validator,
@@ -571,19 +560,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: Image.network(
-                    iconPath,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(
-                        Icons.lock_outlined,
-                        size: 20,
-                        color: hintColor,
-                      );
-                    },
-                  ),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: hintColor,
                 ),
               ),
               suffixIcon: IconButton(

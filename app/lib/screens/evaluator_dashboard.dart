@@ -81,14 +81,7 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                 Row(
                   children: [
                     IconButton(
-                      icon: Image.network(
-                        'http://localhost:4000/assets/e8e134cbdb00505d949ef0fe37f0cf95e7db866b.svg',
-                        width: 16,
-                        height: 16,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(Icons.settings, size: 16, color: textPrimary);
-                        },
-                      ),
+                      icon: Icon(Icons.settings, size: 16, color: textPrimary),
                       onPressed: () {
                         // TODO: Open settings panel
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -97,14 +90,7 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                       },
                     ),
                     IconButton(
-                      icon: Image.network(
-                        'http://localhost:4000/assets/a0b22481b8ea8e6a516e1fb164ffee429337493e.svg',
-                        width: 16,
-                        height: 16,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(Icons.logout, size: 16, color: textPrimary);
-                        },
-                      ),
+                      icon: Icon(Icons.logout, size: 16, color: textPrimary),
                       onPressed: () {
                         // Logout action
                       },
@@ -128,14 +114,7 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                       Row(
                         children: [
                           IconButton(
-                            icon: Image.network(
-                              'http://localhost:4000/assets/225b42b56819cf3873c09f81c108d3a2940a23e6.svg',
-                              width: 16,
-                              height: 16,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(Icons.calendar_today, size: 16, color: textPrimary);
-                              },
-                            ),
+                            icon: Icon(Icons.calendar_today, size: 16, color: textPrimary),
                             onPressed: () {
                               // TODO: Open date picker
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -160,14 +139,7 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                                 letterSpacing: -0.15,
                               ),
                               underline: Container(),
-                              icon: Image.network(
-                                'http://localhost:4000/assets/10c76be7e9d771a3b66305dcf0d25e8012490d5a.svg',
-                                width: 16,
-                                height: 16,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Icon(Icons.arrow_drop_down, size: 16, color: textPrimary);
-                                },
-                              ),
+                              icon: Icon(Icons.arrow_drop_down, size: 16, color: textPrimary),
                               items: ['Last 7 Days', 'Last 30 Days', 'Last 90 Days'].map((String value) {
                                 return DropdownMenuItem<String>(
                                   value: value,
@@ -192,14 +164,7 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                                 const SnackBar(content: Text('Comparison view coming soon')),
                               );
                             },
-                            icon: Image.network(
-                              'http://localhost:4000/assets/497540032d54ac2d8d5da41a3597a6ae9ffdfa89.svg',
-                              width: 16,
-                              height: 16,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(Icons.compare_arrows, size: 16, color: textPrimary);
-                              },
-                            ),
+                            icon: Icon(Icons.compare_arrows, size: 16, color: textPrimary),
                             label: Text(
                               'Show Comparison',
                               style: TextStyle(
@@ -222,14 +187,7 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                                 const SnackBar(content: Text('CSV export coming soon')),
                               );
                             },
-                            icon: Image.network(
-                              'http://localhost:4000/assets/0d27f6ee5444ef9432334954356f4b559eca73fa.svg',
-                              width: 16,
-                              height: 16,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(Icons.download, size: 16, color: textPrimary);
-                              },
-                            ),
+                            icon: Icon(Icons.download, size: 16, color: textPrimary),
                             label: Text(
                               'Export CSV',
                               style: TextStyle(
@@ -249,14 +207,7 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                                 const SnackBar(content: Text('PDF export coming soon')),
                               );
                             },
-                            icon: Image.network(
-                              'http://localhost:4000/assets/e01c151b5c87c77e876624fcd90c34273ffc837b.svg',
-                              width: 16,
-                              height: 16,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(Icons.picture_as_pdf, size: 16, color: textPrimary);
-                              },
-                            ),
+                            icon: Icon(Icons.picture_as_pdf, size: 16, color: textPrimary),
                             label: Text(
                               'Export PDF',
                               style: TextStyle(
@@ -291,37 +242,37 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                     runSpacing: 16,
                     children: [
                       _buildMetricCard(
-                        icon: 'http://localhost:4000/assets/f5e817ded5c5407219301ea8c25d8571570a26df.svg',
+                        icon: Icons.people_outline,
                         label: 'Total Members',
                         value: '5',
                         valueColor: limeColor,
                       ),
                       _buildMetricCard(
-                        icon: 'http://localhost:4000/assets/81a8adb99ee898ead282150759e6d83bca9a43d9.svg',
+                        icon: Icons.person_pin_circle_outlined,
                         label: 'Active Members',
                         value: '4',
                         valueColor: const Color(0xFF00BC7D),
                       ),
                       _buildMetricCard(
-                        icon: 'http://localhost:4000/assets/8c55ed7c41c764388fd835c6a7eab05801afa0c4.svg',
+                        icon: Icons.bar_chart_outlined,
                         label: 'Average Score',
                         value: '75',
                         valueColor: const Color(0xFF10B981), // emerald-400
                       ),
                       _buildMetricCard(
-                        icon: 'http://localhost:4000/assets/571f8325dafc9dc62866f74d5490f131db87bda5.svg',
+                        icon: Icons.video_collection_outlined,
                         label: 'Total Recordings',
                         value: '83',
                         valueColor: const Color(0xFF2B7FFF),
                       ),
                       _buildMetricCard(
-                        icon: 'http://localhost:4000/assets/8a9f16a8540acedebf5752b78be3a9e4e319c8fe.svg',
+                        icon: Icons.timer_outlined,
                         label: 'Avg Recording Time',
                         value: '5.2 min',
                         valueColor: const Color(0xFFAD46FF),
                       ),
                       _buildMetricCard(
-                        icon: 'http://localhost:4000/assets/dd65aaad08a116228f7aa4b522bc89a2fbe9c38b.svg',
+                        icon: Icons.task_alt_outlined,
                         label: 'Completion Rate',
                         value: '78%',
                         valueColor: const Color(0xFF00BBA7),
@@ -332,14 +283,7 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                   // Alerts & Notifications
                   Row(
                     children: [
-                      Image.network(
-                        'http://localhost:4000/assets/9c4a3bb479f14c25edc6018efd59ab4cbd99226b.svg',
-                        width: 20,
-                        height: 20,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(Icons.notifications, size: 20, color: textPrimary);
-                        },
-                      ),
+                      const Icon(Icons.notifications, size: 20, color: textPrimary),
                       const SizedBox(width: 8),
                       Text(
                         'Alerts & Notifications',
@@ -358,7 +302,7 @@ class EvaluatorDashboardScreen extends StatelessWidget {
                           color: const Color(0x1AFF6900), // orange with 10% opacity
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text(
+                        child: const Text(
                           '3',
                           style: TextStyle(
                             fontFamily: 'Inter',
@@ -494,7 +438,7 @@ class EvaluatorDashboardScreen extends StatelessWidget {
   }
 
   Widget _buildMetricCard({
-    required String icon,
+    required IconData icon,
     required String label,
     required String value,
     required Color valueColor,
@@ -516,14 +460,7 @@ class EvaluatorDashboardScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              Image.network(
-                icon,
-                width: 14,
-                height: 14,
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(Icons.analytics, size: 14, color: textSecondary);
-                },
-              ),
+              Icon(icon, size: 14, color: textSecondary),
               const SizedBox(width: 8),
               Text(
                 label,

@@ -81,29 +81,20 @@ class _AnalysisLoadingScreenState extends State<AnalysisLoadingScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Logo
-            Opacity(
-              opacity: 0.649,
-              child: Image.network(
-                'http://localhost:4000/assets/3228caccabcd097b00e036963ce56e4e2efef6da.png',
+          Opacity(
+            opacity: 0.649,
+            child: ClipOval(
+              child: Container(
                 width: 160,
                 height: 160,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 160,
-                    height: 160,
-                    decoration: BoxDecoration(
-                      color: lime300.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.person,
-                      size: 80,
-                      color: lime300,
-                    ),
-                  );
-                },
+                color: Colors.transparent,
+                child: Image.asset(
+                  'assets/images/dale_logo.png',
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
+          ),
             const SizedBox(height: 38.931),
             
             // "Performance..." text
